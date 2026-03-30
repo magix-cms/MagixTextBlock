@@ -1,0 +1,9 @@
+{
+  "name": "MagixTextBlock",
+  "version": "1.0.0",
+  "description": "Gestionnaire de blocs de texte libres. Permet d'insérer des textes multilingues n'importe où dans le thème via la balise native {textblock}.",
+  "author": "Magix CMS",
+  "type": "hybrid",
+  "has_config": true,
+  "default_hooks": []
+}
