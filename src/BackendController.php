@@ -23,12 +23,7 @@ class BackendController extends BaseController
             return;
         }
 
-        // 🟢 Route de suppression
-        if ($action === 'deleteBlock') {
-            $this->processDeleteBlock();
-            return;
-        }
-
+        // Le routeur natif va détecter 'delete' et appeler la méthode associée
         if (method_exists($this, $action)) {
             $this->$action();
         } else {
@@ -44,11 +39,56 @@ class BackendController extends BaseController
         $db = new TextBlockAdminDb();
         $idLangDefault = (int)($this->defaultLang['id_lang'] ?? 1);
 
+        // 1. Récupération des données brutes
         $blocksList = $db->getBlocksList($idLangDefault);
 
+        // 2. Formatage des données en TEXTE BRUT uniquement
+        if (!empty($blocksList)) {
+            foreach ($blocksList as &$block) {
+                // Le contexte brut
+                $block['context_badge'] = $block['context'];
+
+                // La balise Smarty brute, prête à copier
+                $block['alias_smarty'] = '{textblock alias="' . $block['alias'] . '"}';
+
+                // Nettoyage et troncature du texte
+                $cleanText = strip_tags($block['content_tb'] ?? '');
+                $block['content_preview'] = mb_strlen($cleanText) > 60 ? mb_substr($cleanText, 0, 60) . '...' : ($cleanText ?: 'Vide');
+            }
+        }
+
+        // 3. Configuration des colonnes
+        $targetColumns = ['id_tb', 'context_badge', 'alias_smarty', 'content_preview'];
+
+        $rawScheme = [
+            ['column' => 'id_tb', 'type' => 'int'],
+            ['column' => 'context_badge', 'type' => 'varchar(255)'],
+            ['column' => 'alias_smarty', 'type' => 'varchar(255)'],
+            ['column' => 'content_preview', 'type' => 'text']
+        ];
+
+        // 🟢 C'est ICI qu'on applique le design via la clé 'class' !
+        // Ces classes Bootstrap seront ajoutées directement sur les balises <td>
+        $associations = [
+            'context_badge'   => ['title' => 'Contexte', 'type' => 'text', 'class' => 'text-uppercase text-secondary fw-bold ps-4'],
+            'alias_smarty'    => ['title' => 'Alias (Variable Smarty)', 'type' => 'text', 'class' => 'text-primary fw-bold font-monospace'],
+            'content_preview' => ['title' => 'Extrait du contenu', 'type' => 'text', 'class' => 'text-muted small']
+        ];
+
+        // 4. Exécution
+        $this->getScheme($rawScheme, $targetColumns, $associations);
+        $this->getItems('textblocks', $blocksList, true);
+
+        // 5. Assignation
         $this->view->assign([
-            'blocksList' => $blocksList,
-            'hashtoken'  => $this->session->getToken()
+            'idcolumn'   => 'id_tb',
+            'controller' => 'MagixTextBlock',
+            'hashtoken'  => $this->session->getToken(),
+            'url_token'  => urlencode($this->session->getToken()),
+            'sortable'   => false,
+            'checkbox'   => true,
+            'edit'       => true,
+            'dlt'        => true
         ]);
 
         $this->view->display('index.tpl');
@@ -155,17 +195,41 @@ class BackendController extends BaseController
     }
 
     /**
-     * Traitement AJAX de la suppression
+     * Traitement AJAX de la suppression (Standard Magix CMS pour table-forms)
      */
-    private function processDeleteBlock(): void
+    public function delete(): void
     {
-        $idTb = (int)($_GET['id_tb'] ?? 0);
-        $db = new TextBlockAdminDb();
+        // Nettoie le buffer pour éviter les erreurs JSON
+        if (ob_get_length()) ob_clean();
 
-        if ($idTb > 0 && $db->deleteBlock($idTb)) {
-            $this->jsonResponse(true, 'Bloc de texte supprimé avec succès.', ['type' => 'delete']);
+        // 1. Vérification du jeton de sécurité
+        $token = $_GET['hashtoken'] ?? '';
+        if (!$this->session->validateToken(str_replace(' ', '+', $token))) {
+            $this->jsonResponse(false, 'Token de sécurité invalide.');
         }
 
-        $this->jsonResponse(false, 'Erreur lors de la suppression.');
+        // 2. Récupération des IDs (fonctionne pour 1 ou plusieurs lignes cochées)
+        $ids = $_POST['ids'] ?? [$_POST['id'] ?? null];
+        $cleanIds = array_filter(array_map('intval', (array)$ids));
+
+        if (!empty($cleanIds)) {
+            $db = new TextBlockAdminDb();
+            $deletedCount = 0;
+
+            // 3. Boucle de suppression
+            foreach ($cleanIds as $idTb) {
+                if ($db->deleteBlock($idTb)) {
+                    $deletedCount++;
+                }
+            }
+
+            // 4. Réponse JSON formatée pour le Javascript de table-forms
+            if ($deletedCount > 0) {
+                $msg = $deletedCount > 1 ? "$deletedCount blocs supprimés avec succès." : "Le bloc a été supprimé.";
+                $this->jsonResponse(true, $msg, ['type' => 'delete', 'ids' => $cleanIds]);
+            }
+        }
+
+        $this->jsonResponse(false, 'Erreur : Aucun bloc sélectionné ou suppression impossible.');
     }
 }
