@@ -5,5 +5,8 @@
   "author": "Magix CMS",
   "type": "hybrid",
   "has_config": true,
-  "default_hooks": []
+  "default_hooks": [
+    "displayHomeBottom",
+    "displayHomeTop"
+  ]
 }

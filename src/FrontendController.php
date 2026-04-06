@@ -5,7 +5,7 @@ namespace Plugins\MagixTextBlock\src;
 
 use Plugins\MagixTextBlock\db\TextBlockFrontDb;
 use Magepattern\Component\Tool\SmartyTool;
-use Smarty\Template; // 🟢 FIX : On importe la classe exacte de Smarty 5
+use Smarty\Template;
 
 class FrontendController
 {
@@ -13,10 +13,30 @@ class FrontendController
     private static bool $isLoaded = false;
 
     /**
-     * Rendu appelé automatiquement par Smarty lorsqu'il croise {textblock alias="..."}
-     * * 🟢 FIX : Le paramètre 2 exige désormais le type Smarty\Template
+     * 🟢 NOUVEAU : Le routeur pour les HOOKS du CMS
+     * Le HookManager envoie toujours le nom du hook dans $params['name']
      */
-    public static function renderTextBlock(array $params, Template $template): string
+    public static function renderWidget(array $params = []): string
+    {
+        $hookName = $params['name'] ?? '';
+
+        if ($hookName === 'displayHomeTop') {
+            // On redirige vers notre méthode d'affichage avec l'alias forcé
+            return self::renderTextBlock(['alias' => 'hook_home_top']);
+        }
+
+        if ($hookName === 'displayHomeBottom') {
+            return self::renderTextBlock(['alias' => 'hook_home_bottom']);
+        }
+
+        return '';
+    }
+
+    /**
+     * L'AFFICHAGE (Manuel ou par Hook)
+     * Reste strictement identique à ce qu'on avait fait !
+     */
+    public static function renderTextBlock(array $params, ?Template $template = null): string
     {
         $alias = $params['alias'] ?? '';
 
@@ -30,11 +50,9 @@ class FrontendController
             $langData = $view->getTemplateVars('current_lang') ?: $view->getTemplateVars('lang') ?: ['id_lang' => 1];
             $idLang = (int)($langData['id_lang'] ?? 1);
 
-            // Détection du contrôleur (ex: index.php?controller=news)
             $context = $_GET['controller'] ?? 'home';
             $context = strtolower($context);
 
-            // Sécurité : Magix appelle souvent la page d'accueil "index"
             if ($context === 'index' || $context === '') {
                 $context = 'home';
             }
@@ -42,7 +60,6 @@ class FrontendController
             $db = new TextBlockFrontDb();
             $items = $db->getTextBlocksByContext($context, $idLang);
 
-            // On stocke tous les textes de la page en mémoire
             foreach ($items as $item) {
                 self::$cacheTexts[$item['alias']] = $item['content_tb'];
             }
@@ -50,8 +67,6 @@ class FrontendController
             self::$isLoaded = true;
         }
 
-        // On retourne le texte demandé.
-        // Pas besoin de "nofilter", Smarty 5 interprète le HTML renvoyé par un plugin natif !
         return self::$cacheTexts[$alias] ?? '';
     }
 }
