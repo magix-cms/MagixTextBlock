@@ -13,28 +13,8 @@ class FrontendController
     private static bool $isLoaded = false;
 
     /**
-     * 🟢 NOUVEAU : Le routeur pour les HOOKS du CMS
-     * Le HookManager envoie toujours le nom du hook dans $params['name']
-     */
-    public static function renderWidget(array $params = []): string
-    {
-        $hookName = $params['name'] ?? '';
-
-        if ($hookName === 'displayHomeTop') {
-            // On redirige vers notre méthode d'affichage avec l'alias forcé
-            return self::renderTextBlock(['alias' => 'hook_home_top']);
-        }
-
-        if ($hookName === 'displayHomeBottom') {
-            return self::renderTextBlock(['alias' => 'hook_home_bottom']);
-        }
-
-        return '';
-    }
-
-    /**
-     * L'AFFICHAGE (Manuel ou par Hook)
-     * Reste strictement identique à ce qu'on avait fait !
+     * 🟢 MODIFICATION : On ajoute un "?" devant Template pour le rendre optionnel.
+     * Ainsi, on peut l'appeler manuellement depuis les hooks !
      */
     public static function renderTextBlock(array $params, ?Template $template = null): string
     {
