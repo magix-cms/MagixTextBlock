@@ -27,7 +27,7 @@ Ce plugin a été pensé pour offrir une liberté architecturale totale aux int�
 * **Architecture 100% Hybride :** Appelez vos textes manuellement n'importe où dans vos templates via la balise `{textblock alias="..."}`, ou accrochez-les visuellement à n'importe quel hook via le Gestionnaire de Layout. Un même texte peut être utilisé des deux façons simultanément !
 * **Haute Performance (Cache SQL) :** Le plugin intègre le système de cache natif de Magix CMS. Les requêtes en base de données sont mises en cache, offrant un affichage instantané même si vous affichez des dizaines de blocs différents sur une même page.
 * **Multilingue Natif :** Gestion transparente des traductions en fonction de la langue active du visiteur.
-* **Édition Riche :** Intégration complète avec TinyMCE (et ses plugins comme MagixMedia) pour un formatage HTML parfait.
+* **Édition Riche :** Intégration complète avec TinyMCE pour un formatage HTML parfait.
 * **Chargement Contextuel :** Les textes sont liés à des contextes (home, news, footer...) pour ne charger en mémoire que ce qui est strictement nécessaire à la page affichée.
 
 ---
