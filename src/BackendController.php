@@ -8,6 +8,7 @@ use Plugins\MagixTextBlock\db\TextBlockAdminDb;
 use Magepattern\Component\HTTP\Request;
 use Magepattern\Component\Tool\FormTool;
 use Magepattern\Component\Tool\SmartyTool;
+use App\Component\Cache\CacheManager;
 
 class BackendController extends BaseController
 {
@@ -17,7 +18,7 @@ class BackendController extends BaseController
 
         $action = $_GET['action'] ?? 'index';
 
-        // 🟢 Route de sauvegarde (Création / Mise à jour via AJAX)
+        //  Route de sauvegarde (Création / Mise à jour via AJAX)
         if ($action === 'saveBlock' && Request::isMethod('POST')) {
             $this->processSaveBlock();
             return;
@@ -67,7 +68,7 @@ class BackendController extends BaseController
             ['column' => 'content_preview', 'type' => 'text']
         ];
 
-        // 🟢 C'est ICI qu'on applique le design via la clé 'class' !
+        //  C'est ICI qu'on applique le design via la clé 'class' !
         // Ces classes Bootstrap seront ajoutées directement sur les balises <td>
         $associations = [
             'context_badge'   => ['title' => 'Contexte', 'type' => 'text', 'class' => 'text-uppercase text-secondary fw-bold ps-4'],
@@ -117,7 +118,7 @@ class BackendController extends BaseController
     {
         $idTb = (int)($_GET['edit'] ?? 0);
 
-        // 🟢 FIX : Utilisation du header natif comme dans le ProductController
+        //  FIX : Utilisation du header natif comme dans le ProductController
         if ($idTb === 0) {
             header('Location: index.php?controller=MagixTextBlock');
             exit;
@@ -127,7 +128,7 @@ class BackendController extends BaseController
         $langs = $db->fetchLanguages();
         $blockData = $db->getBlockFull($idTb);
 
-        // 🟢 FIX : Redirection si l'ID n'existe pas en DB
+        //  FIX : Redirection si l'ID n'existe pas en DB
         if (!$blockData) {
             header('Location: index.php?controller=MagixTextBlock');
             exit;
@@ -155,7 +156,7 @@ class BackendController extends BaseController
         $idTb = (int)($_POST['id_tb'] ?? 0);
         $db = new TextBlockAdminDb();
 
-        // 🟢 Nettoyage strict de l'alias (Slugification pour Smarty)
+        //  Nettoyage strict de l'alias (Slugification pour Smarty)
         $rawAlias = $_POST['alias'] ?? '';
         $alias = preg_replace('/[^a-z0-9_]/', '_', strtolower(trim($rawAlias)));
         $context = FormTool::simpleClean($_POST['context'] ?? 'home');
@@ -186,6 +187,8 @@ class BackendController extends BaseController
         }
 
         if ($db->saveBlock($idTb, $mainData, $contentData)) {
+            CacheManager::clearFrontend('magixtextblock');
+
             $msg = ($idTb === 0) ? 'Bloc de texte créé avec succès.' : 'Bloc de texte mis à jour.';
             $type = ($idTb === 0) ? 'add' : 'update';
             $this->jsonResponse(true, $msg, ['type' => $type]);
@@ -225,6 +228,8 @@ class BackendController extends BaseController
 
             // 4. Réponse JSON formatée pour le Javascript de table-forms
             if ($deletedCount > 0) {
+                CacheManager::clearFrontend('magixtextblock');
+
                 $msg = $deletedCount > 1 ? "$deletedCount blocs supprimés avec succès." : "Le bloc a été supprimé.";
                 $this->jsonResponse(true, $msg, ['type' => 'delete', 'ids' => $cleanIds]);
             }

@@ -13,12 +13,26 @@ class FrontendController
     private static bool $isLoaded = false;
 
     /**
-     * 🟢 MODIFICATION : On ajoute un "?" devant Template pour le rendre optionnel.
-     * Ainsi, on peut l'appeler manuellement depuis les hooks !
+     * Point d'entrée standard pour le système de Hook dynamique (Layout)
+     */
+    public static function renderWidget(array $params = []): string
+    {
+        // Le Layout système envoie généralement 'instance_slug' ou 'item_slug'
+        $slug = $params['instance_slug'] ?? $params['item_slug'] ?? '';
+
+        if (empty($slug)) return '';
+
+        // On redirige vers notre méthode principale en lui passant l'alias
+        return self::renderTextBlock(['alias' => $slug]);
+    }
+
+    /**
+     * Point d'entrée pour la balise Smarty {textblock alias="..."}
      */
     public static function renderTextBlock(array $params, ?Template $template = null): string
     {
-        $alias = $params['alias'] ?? '';
+        // FUSION : On accepte 'alias' (Smarty) ou 'instance_slug' (Hook)
+        $alias = $params['alias'] ?? $params['instance_slug'] ?? '';
 
         if (empty($alias)) {
             return '';
@@ -38,6 +52,7 @@ class FrontendController
             }
 
             $db = new TextBlockFrontDb();
+            // Cette requête devra être mise en cache SQL (voir étape suivante)
             $items = $db->getTextBlocksByContext($context, $idLang);
 
             foreach ($items as $item) {

@@ -5,7 +5,7 @@
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D%208.2-blue.svg)](https://php.net/)
 [![Magix CMS](https://img.shields.io/badge/Magix%20CMS-4.x-success.svg)](https://www.magix-cms.com/)
 
-**MagixTextBlock** est un plugin hybride open source pour **Magix CMS 4** qui révolutionne la gestion des contenus libres. Oubliez les contraintes des balises `{hook}` traditionnelles et des modules en boucle : ce plugin introduit un système de balisage Smarty natif permettant d'injecter des blocs de texte riche multilingues au pixel près, n'importe où dans votre thème.
+**MagixTextBlock** est un plugin hybride open source pour **Magix CMS 4** qui révolutionne la gestion des contenus libres. Profitez du meilleur des deux mondes : injectez des blocs de texte riche multilingues au pixel près via un système de balisage Smarty natif, ou placez-les dynamiquement (Glisser-Déposer) via le Gestionnaire de Layout du CMS.
 
 ## 👥 Auteurs
 
@@ -22,10 +22,10 @@ Si vous souhaitez soutenir le développement de ce plugin, vous pouvez faire un 
 
 ## ✨ Fonctionnalités clés
 
-Contrairement aux modules classiques qui affichent des listes ou nécessitent des positions figées, ce plugin a été pensé pour offrir une liberté architecturale totale aux intégrateurs et webmasters.
+Ce plugin a été pensé pour offrir une liberté architecturale totale aux intégrateurs et webmasters, sans sacrifier les standards du CMS.
 
-* **Placement Chirurgical (Zéro Hook) :** N'utilise aucun hook de positionnement. Vous appelez vos textes directement via une fonction Smarty personnalisée : `{textblock alias="..."}`.
-* **Haute Performance (Mise en cache) :** Toutes les variables de texte d'une page sont chargées via **une seule requête SQL**, même si vous affichez 20 blocs différents.
+* **Architecture 100% Hybride :** Appelez vos textes manuellement n'importe où dans vos templates via la balise `{textblock alias="..."}`, ou accrochez-les visuellement à n'importe quel hook via le Gestionnaire de Layout. Un même texte peut être utilisé des deux façons simultanément !
+* **Haute Performance (Cache SQL) :** Le plugin intègre le système de cache natif de Magix CMS. Les requêtes en base de données sont mises en cache, offrant un affichage instantané même si vous affichez des dizaines de blocs différents sur une même page.
 * **Multilingue Natif :** Gestion transparente des traductions en fonction de la langue active du visiteur.
 * **Édition Riche :** Intégration complète avec TinyMCE (et ses plugins comme MagixMedia) pour un formatage HTML parfait.
 * **Chargement Contextuel :** Les textes sont liés à des contextes (home, news, footer...) pour ne charger en mémoire que ce qui est strictement nécessaire à la page affichée.
@@ -37,29 +37,40 @@ Contrairement aux modules classiques qui affichent des listes ou nécessitent de
 1. Téléchargez et décompressez l'archive du plugin.
 2. Placez le dossier `MagixTextBlock` dans le répertoire `plugins/` de votre installation Magix CMS.
 3. Connectez-vous à l'administration de votre site.
-4. Rendez-vous dans **Extensions** > **Gestionnaire**.
+4. Rendez-vous dans **Extensions** > **Plugins**.
 5. Cliquez sur le bouton d'installation pour **MagixTextBlock**.
-6. Accédez à la configuration du plugin via le bouton "Gérer" pour créer votre premier bloc.
+6. Accédez à la configuration du plugin via le bouton "Gérer" pour créer vos blocs.
 
 ---
 
 ## 💻 Comment l'utiliser ?
 
-L'utilisation se fait en deux étapes très simples :
+MagixTextBlock s'adapte à votre façon de travailler. Vous pouvez utiliser deux méthodes d'intégration :
 
-1. **Dans le Back-office :** Créez un nouveau bloc de texte, assignez-lui un **contexte** (ex: *home*) et un **alias unique** (ex: *test_block*).
-2. **Dans votre thème (Fichiers `.tpl`) :** Appelez simplement votre alias avec la balise dédiée. Aucun attribut `nofilter` n'est requis, l'injection HTML est gérée nativement par le cœur de Smarty 5.
+### Méthode 1 : Placement Chirurgical (Balise Smarty Statique)
+Idéal pour le développeur du thème qui souhaite insérer un texte en plein milieu d'une structure HTML complexe.
+
+1. **Dans le Back-office :** Créez un nouveau bloc, assignez-lui le **contexte** de la page (ex: *home*) et un **alias libre** (ex: *intro_texte*).
+2. **Dans votre thème (`.tpl`) :** Appelez simplement votre alias à l'endroit exact souhaité via la balise native.
 
 **Exemple d'intégration :**
 
 ```smarty
 <section class="hero-section">
     <div class="container text-center">
-        {* On appelle la nouvelle balise magique ! *}
-        {textblock alias="test_block"}
+        {* Appel manuel à l'endroit exact souhaité *}
+        {textblock alias="intro_texte"}
     </div>
 </section>
 ```
+
+### Méthode 2 : Affichage Dynamique (Gestionnaire de Layout)
+Idéal pour le client final ou le webmaster qui souhaite ajouter des blocs de texte visuellement, sans toucher au code source du thème.
+
+1. **Dans la configuration du plugin :** Créez votre bloc texte avec l'alias de votre choix (ex: `promo_footer`) et définissez son contexte.
+2. **Dans le menu Apparence > Layout :** Ajoutez le module **MagixTextBlock** dans la zone de hook souhaitée (ex: `displayFooter`).
+3. **La liaison :** Dans les paramètres de ce module fraîchement ajouté au layout, renseignez exactement votre alias (`promo_footer`) dans le champ **Identifiant / Slug**.
+4. C'est tout ! Le texte apparaîtra automatiquement dans la zone prévue, géré dynamiquement par le CMS.
 
 ---
 
@@ -75,10 +86,10 @@ L'utilisation se fait en deux étapes très simples :
 
 | Problème | Cause possible | Solution |
 | :--- | :--- | :--- |
-| **Le texte ne s'affiche pas** | Mauvais contexte ou alias erroné | Vérifiez que l'alias écrit dans votre `.tpl` correspond exactement à celui du back-office, sans espaces. |
-| **Erreur de contexte** | La page courante n'est pas ciblée | Assurez-vous que le bloc est assigné au bon module (ex: `home` pour l'accueil, ou `footer` pour du global). |
-| **Code HTML apparent** | Balise mal formattée | Utilisez la syntaxe stricte `{textblock alias="votre_alias"}`. N'ajoutez pas de `$`, ni de `nofilter`. |
-| **Erreur Fatale Smarty** | Conflit de version Smarty | Ce plugin utilise le namespace `Smarty\Template` requis par Smarty 5. Vérifiez la version de votre moteur de template. |
+| **Le texte ne s'affiche pas** | Mauvais contexte ou alias erroné | Vérifiez que l'alias défini dans le `.tpl` (ou le slug dans le Layout) correspond *exactement* à celui du bloc créé. |
+| **Erreur de contexte** | La page courante n'est pas ciblée | Assurez-vous que le bloc est assigné au bon contexte (ex: `home` pour l'accueil, ou `footer`/`other` pour un affichage global). |
+| **Modification invisible en Front** | Cache SQL actif | Sauvegardez à nouveau le bloc depuis l'administration du plugin. Cela purgera automatiquement le cache Frontend (`ClearFrontend`). |
+| **Code HTML apparent en texte brut** | Balise mal formattée | Utilisez la syntaxe stricte `{textblock alias="votre_alias"}`. N'ajoutez pas de `$`, ni de `nofilter` avec Smarty 5. |
 
 ---
 
@@ -95,6 +106,6 @@ Ce projet est open source. Nous encourageons les développeurs à l'améliorer :
 
 ## 📄 Licence
 
-Ce projet est sous licence **GPLv3**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence **GPLv3**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.  
 Copyright (C) 2008 - 2026 Gerits Aurelien (Magix CMS).  
 Ce programme est un logiciel libre ; vous pouvez le redistribuer et/ou le modifier selon les termes de la Licence Publique Générale GNU telle que publiée par la Free Software Foundation ; soit la version 3 de la Licence, ou (à votre discrétion) toute version ultérieure.
