@@ -9,6 +9,7 @@ use Magepattern\Component\HTTP\Request;
 use Magepattern\Component\Tool\FormTool;
 use Magepattern\Component\Tool\SmartyTool;
 use App\Component\Cache\CacheManager;
+use App\Backend\Db\RevisionsDb; // Import du gestionnaire de révisions
 
 class BackendController extends BaseController
 {
@@ -69,7 +70,6 @@ class BackendController extends BaseController
         ];
 
         //  C'est ICI qu'on applique le design via la clé 'class' !
-        // Ces classes Bootstrap seront ajoutées directement sur les balises <td>
         $associations = [
             'context_badge'   => ['title' => 'Contexte', 'type' => 'text', 'class' => 'text-uppercase text-secondary fw-bold ps-4'],
             'alias_smarty'    => ['title' => 'Alias (Variable Smarty)', 'type' => 'text', 'class' => 'text-primary fw-bold font-monospace'],
@@ -118,7 +118,6 @@ class BackendController extends BaseController
     {
         $idTb = (int)($_GET['edit'] ?? 0);
 
-        //  FIX : Utilisation du header natif comme dans le ProductController
         if ($idTb === 0) {
             header('Location: index.php?controller=MagixTextBlock');
             exit;
@@ -128,7 +127,6 @@ class BackendController extends BaseController
         $langs = $db->fetchLanguages();
         $blockData = $db->getBlockFull($idTb);
 
-        //  FIX : Redirection si l'ID n'existe pas en DB
         if (!$blockData) {
             header('Location: index.php?controller=MagixTextBlock');
             exit;
@@ -156,7 +154,6 @@ class BackendController extends BaseController
         $idTb = (int)($_POST['id_tb'] ?? 0);
         $db = new TextBlockAdminDb();
 
-        //  Nettoyage strict de l'alias (Slugification pour Smarty)
         $rawAlias = $_POST['alias'] ?? '';
         $alias = preg_replace('/[^a-z0-9_]/', '_', strtolower(trim($rawAlias)));
         $context = FormTool::simpleClean($_POST['context'] ?? 'home');
@@ -180,18 +177,42 @@ class BackendController extends BaseController
         if (isset($_POST['content_tb']) && is_array($_POST['content_tb'])) {
             foreach ($_POST['content_tb'] as $idLang => $content) {
                 $contentData[$idLang] = [
-                    // On ne nettoie pas avec simpleClean ici car c'est du HTML provenant de TinyMCE
                     'content_tb' => $content ?? ''
                 ];
             }
         }
 
-        if ($db->saveBlock($idTb, $mainData, $contentData)) {
+        // Exécution de la sauvegarde
+        $savedResult = $db->saveBlock($idTb, $mainData, $contentData);
+
+        if ($savedResult) {
+            // DÉBUT DE LA GESTION DES RÉVISIONS
+            // Si c'est une création (0), on récupère le nouvel ID retourné par saveBlock
+            $finalId = ($idTb === 0 && is_numeric($savedResult)) ? (int)$savedResult : $idTb;
+
+            if ($finalId > 0) {
+                $revDb = new RevisionsDb();
+                foreach ($contentData as $idLang => $c) {
+                    if (!empty($c['content_tb'])) {
+                        // Paramètres natifs : (module, id_element, id_langue, nom_du_champ, contenu_html)
+                        $revDb->saveRevision('magixtextblock', $finalId, (int)$idLang, 'content_tb', $c['content_tb']);
+                    }
+                }
+            }
+            // FIN DE LA GESTION DES RÉVISIONS
+
             CacheManager::clearFrontend('magixtextblock');
 
             $msg = ($idTb === 0) ? 'Bloc de texte créé avec succès.' : 'Bloc de texte mis à jour.';
             $type = ($idTb === 0) ? 'add' : 'update';
-            $this->jsonResponse(true, $msg, ['type' => $type]);
+
+            // Si on a un nouvel ID, on peut le renvoyer au script AJAX si besoin
+            $responsePayload = ['type' => $type];
+            if ($idTb === 0 && $finalId > 0) {
+                $responsePayload['id'] = $finalId;
+            }
+
+            $this->jsonResponse(true, $msg, $responsePayload);
         } else {
             $this->jsonResponse(false, 'Erreur lors de l\'enregistrement du bloc.');
         }
@@ -202,16 +223,13 @@ class BackendController extends BaseController
      */
     public function delete(): void
     {
-        // Nettoie le buffer pour éviter les erreurs JSON
         if (ob_get_length()) ob_clean();
 
-        // 1. Vérification du jeton de sécurité
         $token = $_GET['hashtoken'] ?? '';
         if (!$this->session->validateToken(str_replace(' ', '+', $token))) {
             $this->jsonResponse(false, 'Token de sécurité invalide.');
         }
 
-        // 2. Récupération des IDs (fonctionne pour 1 ou plusieurs lignes cochées)
         $ids = $_POST['ids'] ?? [$_POST['id'] ?? null];
         $cleanIds = array_filter(array_map('intval', (array)$ids));
 
@@ -219,14 +237,12 @@ class BackendController extends BaseController
             $db = new TextBlockAdminDb();
             $deletedCount = 0;
 
-            // 3. Boucle de suppression
             foreach ($cleanIds as $idTb) {
                 if ($db->deleteBlock($idTb)) {
                     $deletedCount++;
                 }
             }
 
-            // 4. Réponse JSON formatée pour le Javascript de table-forms
             if ($deletedCount > 0) {
                 CacheManager::clearFrontend('magixtextblock');
 

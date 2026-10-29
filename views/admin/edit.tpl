@@ -61,7 +61,16 @@
                             <fieldset class="tab-pane {if $iso@first}show active{/if}" id="lang-{$id}">
                                 <div class="mb-3">
                                     <label for="content_tb_{$id}" class="form-label fw-medium">Texte ({$iso|upper}) :</label>
-                                    <textarea class="form-control mceEditor" id="content_tb_{$id}" name="content_tb[{$id}]" rows="15">{$block.content.$id.content_tb|default:''}</textarea>
+                                    <textarea
+                                            class="form-control mceEditor"
+                                            id="content_tb_{$id}"
+                                            name="content_tb[{$id}]"
+                                            rows="15"
+                                            data-controller="magixtextblock"
+                                            data-itemid="{$block.id_tb}"
+                                            data-lang="{$id}"
+                                            data-field="content_tb"
+                                    >{$block.content.$id.content_tb|default:''}</textarea>
                                 </div>
                             </fieldset>
                         {/foreach}
